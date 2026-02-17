@@ -11,7 +11,7 @@ URL `https://localhost:8080`.
 You click an image in the page, and the web page, using http request, sends the image to the Forward 
 DWT function implemented in C with the http server code. The page requests the results with the 
 xmlhttprequest to the webui-cc-wavelet http server and displays the response.  
-The page layout is identical to that of the [WebAssembly wavelet transform](https://vasilich-tregub.github.io/wa-eavelet/index.html).
+The page layout is identical to that of the [WebAssembly wavelet transform](https://vasilich-tregub.github.io/wa-wavelet/index.html).
 
 Note to developers: to update the web page files of the project to be copied to the CMAKE 
 current binary directory after edit, forcefully save CMakeLists.txt.
