@@ -32,13 +32,12 @@
     </div>
     <div>
         C Performance (ms): <input id="idPerf" />
-        Hor Levels: <input type="number" id="idHorizontalLevels" min="0" max="5" readonly value="1" />
-        Vert Levels: <input type="number" id="idVerticalLevels" min="0" max="5" readonly value="1" />
+        Hor Levels: <input type="number" id="idHorizontalLevels" min="0" max="5" value="1" />
+        Vert Levels: <input type="number" id="idVerticalLevels" min="0" max="5" value="0" />
         <button id="idInverse" onclick="inverse_transform()">Inverse Transform</button>
     </div>
     <div style="width: 480px" id="idShifts"></div>
     <div style="height: 240px">
-        <img onclick="forward_transform(this)" style="max-width: 100%; max-height: 100%" src="favicon128.png" />
         <img onclick="forward_transform(this)" style="max-width: 100%; max-height: 100%" src="NGC2207.jpg" />
         <img onclick="forward_transform(this)" style="max-width: 100%; max-height: 100%" src="hubble-ngc4388-potw2550a.jpg" />
     </div>

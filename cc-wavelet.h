@@ -4,3 +4,4 @@
 #pragma once
 
 int forward_transform(char* imageData, int width, int height, int horLevels, int vertLevels);
+int inverse_transform(char* imageData, int width, int height, int horLevels, int vertLevels);

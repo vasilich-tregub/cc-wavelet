@@ -1,13 +1,23 @@
-﻿// cc-wavelet.cpp : Defines the entry point for the application.
-//
-
-/* TERMS OF USE
+﻿/* TERMS OF USE
  * This source code is subject to the terms of the MIT License.
  * Copyright(c) 2026 Vladimir Vasilich Tregub
 */
 #include <malloc.h>
 #include <stdint.h>
 #include <time.h>
+
+static _inline uint8_t clamp(int32_t v, int32_t max_v)
+{
+    if (v > max_v)
+    {
+        return max_v;
+    }
+    if (v < 0)
+    {
+        return 0;
+    }
+    return v;
+}
 
 int32_t* imR;
 int32_t* imG;
@@ -60,24 +70,17 @@ void forward_transform_vertical(level) {
     }
 }
 
-int forward_transform(char* imageData, int width, int height, int horLevels, int vertLevels)
+int forward_transform(uint8_t* imageData, int width, int height, int horLevels, int vertLevels)
 {
     imgsize = width * height;
     imR = (int32_t*)malloc(sizeof(int32_t) * imgsize);
     imG = (int32_t*)malloc(sizeof(int32_t) * imgsize);
     imB = (int32_t*)malloc(sizeof(int32_t) * imgsize);
-    for (int i = 0; i < imgsize; ++i)
-    {
-        imR[i] = imageData[4 * i + 0];
-        imG[i] = imageData[4 * i + 1];
-        imB[i] = imageData[4 * i + 2];
-    }
-
     // JPEG XS pipeline requires to upscale image data to 20 bit precision
-    for (int i = 0; i < width * height; ++i) {
-        imR[i + 0] = imageData[i * 4 + 0] << 12;
-        imG[i + 1] = imageData[i * 4 + 1] << 12;
-        imB[i + 2] = imageData[i * 4 + 2] << 12;
+    for (int i = 0; i < imgsize; ++i) {
+        imR[i] = imageData[i * 4 + 0] << 12;
+        imG[i] = imageData[i * 4 + 1] << 12;
+        imB[i] = imageData[i * 4 + 2] << 12;
     }
 
     clock_t startTime = clock();
@@ -88,11 +91,17 @@ int forward_transform(char* imageData, int width, int height, int horLevels, int
         forward_transform_horizontal(level);
     }
     clock_t finishTime = clock();
-    for (int i = 0; i < width * height; ++i) {
-            imageData[i * 4 + 0] = (imR[i] >> 12);
-            imageData[i * 4 + 1] = (imG[i] >> 12);
-            imageData[i * 4 + 2] = (imB[i] >> 12);
+    for (int i = 0; i < imgsize; ++i) {
+            imageData[i * 4 + 0] = clamp(imR[i] >> 12, 255);
+            imageData[i * 4 + 1] = clamp(imG[i] >> 12, 255);
+            imageData[i * 4 + 2] = clamp(imB[i] >> 12, 255);
     }
+    free(imR);
+    imR = NULL;
+    free(imG);
+    imG = NULL;
+    free(imB);
+    imB = NULL;
     return (finishTime - startTime);
 }
 
@@ -154,10 +163,10 @@ int inverse_transform(char* imageData, int width, int height, int horLevels, int
         inverse_transform_vertical(level);
     }
     clock_t finishTime = clock();
-    for (int i = 0; i < width * height; ++i) {
-        imageData[i * 4 + 0] = (imR[i] >> 12);
-        imageData[i * 4 + 1] = (imG[i] >> 12);
-        imageData[i * 4 + 2] = (imB[i] >> 12);
+    for (int i = 0; i < imgsize; ++i) {
+        imageData[i * 4 + 0] = clamp(imR[i] >> 12, 255);
+        imageData[i * 4 + 1] = clamp(imG[i] >> 12, 255);
+        imageData[i * 4 + 2] = clamp(imB[i] >> 12, 255);
     }
     return (finishTime - startTime);
 }

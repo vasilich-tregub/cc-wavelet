@@ -68,6 +68,9 @@ void build_http_response_with_file(int client_socket, char* file_name) {
 
 int width = 0;
 int height = 0;
+int horLevels = 0;
+int vertLevels = 0;
+char* received = NULL;
 void handle_client(int client_socket) {
     char request[CHUNKSIZE] = { 0 };
     byte_received = 0;
@@ -88,67 +91,129 @@ void handle_client(int client_socket) {
                 width = atoi(query_string + 8);
                 char* ptr_height = strstr(query_string, "height=") + 7;
                 height = atoi(ptr_height);
+                char* ptr_horLevels = strstr(query_string, "horLevels=") + 10;
+                horLevels = atoi(ptr_horLevels);
+                char* ptr_vertLevels = strstr(query_string, "vertLevels=") + 11;
+                vertLevels = atoi(ptr_vertLevels);
                 return NULL;
             }
             file_name = strtok(query_string, " ");
             build_http_response_with_file(client_socket, file_name + 1);
         }
         if (!strcmp(query_method, "POST")) {
-            char* ptr_contentlength = strstr(request + 5, "Content-Length: ");
-            if (ptr_contentlength == 0) {
-                printf("No Content-Length header found, exit\n");
-                exit(-1);
-            }
-            int contentlength = atoi(ptr_contentlength + strlen("Content-Length: "));
-            int total_received = 0;
-            char* received = calloc(contentlength, 1);
-            if ((contentlength + byte_received) <= CHUNKSIZE) {
-                memcpy(received, request + byte_received - contentlength, contentlength);
-                total_received = contentlength;
-            }
-            else
-            {
-                do {
-                    byte_received = recv(client_socket, received + total_received, CHUNKSIZE, 0);
-                    if (byte_received == SOCKET_ERROR) {
-                        printf("recv error in POST xhr: %d\n", WSAGetLastError());
-                        break;
+            char* query_route = strtok(NULL, " ");
+            if (!strcmp(query_route, "/DWT")) {
+                char* ptr_contentlength = strstr(request + 10, "Content-Length: ");
+                if (ptr_contentlength == 0) {
+                    printf("No Content-Length header found, exit\n");
+                    exit(-1);
+                }
+                int contentlength = atoi(ptr_contentlength + strlen("Content-Length: "));
+                    int total_received = 0;
+                    char* received = calloc(contentlength, 1);
+                    if ((contentlength + byte_received) <= CHUNKSIZE) {
+                        memcpy(received, request + byte_received - contentlength, contentlength);
+                        total_received = contentlength;
                     }
-                    total_received += byte_received;
-                    //printf("%d,", byte_received);
-                } while (total_received < contentlength);
+                    else
+                    {
+                        do {
+                            byte_received = recv(client_socket, received + total_received, CHUNKSIZE, 0);
+                            if (byte_received == SOCKET_ERROR) {
+                                printf("recv error in POST xhr: %d\n", WSAGetLastError());
+                                break;
+                            }
+                            total_received += byte_received;
+                            //printf("%d,", byte_received);
+                        } while (total_received < contentlength);
+                    }
+                printf("...%d of %d\n", total_received, contentlength);
+                char response[256];
+                sprintf_s(response, 20, "HTTP/1.1 200 OK\r\n\r\n");
+                int ret = send(client_socket, response, (int)strlen(response), 0);
+                if (ret == SOCKET_ERROR) {
+                    printf("'send'1 (when handling POST/DWT): %d", WSAGetLastError());
+                    exit(-1);
+                }
+
+                int execTime = forward_transform(received, width, height, horLevels, vertLevels);
+
+                char* sendback = calloc(contentlength * 2, 1);
+                for (int i = 0; i < contentlength; ++i) {
+                    sendback[2 * i] = received[i] & 0x7F;
+                    sendback[2 * i + 1] = (received[i] >> 7) & 0x01;
+                }
+
+                ret = send(client_socket, sendback, contentlength * 2, 0);
+                if (ret == SOCKET_ERROR) {
+                    printf("'send'2 (when handling POST): %d", WSAGetLastError());
+                    exit(-1);
+                }
+
+                double execTime_ms = 1000 * (double)(execTime) / CLOCKS_PER_SEC;
+                printf("dwt execution time: %f ms\n", execTime_ms);
+
+                free(received);
+                received = NULL;
+                free(sendback);
+                sendback = NULL;
             }
-            printf("...%d of %d\n", total_received, contentlength);
-            char response[256];
-            sprintf_s(response, 20, "HTTP/1.1 200 OK\r\n\r\n");
-            int ret = send(client_socket, response, (int)strlen(response), 0);
-            if (ret == SOCKET_ERROR) {
-                printf("'send'1 (when handling POST): %d", WSAGetLastError());
-                exit(-1);
+            else if (!strcmp(query_route, "/iDWT")) {
+                char* ptr_contentlength = strstr(request + 11, "Content-Length: ");
+                if (ptr_contentlength == 0) {
+                    printf("No Content-Length header found, exit\n");
+                    exit(-1);
+                }
+                int contentlength = atoi(ptr_contentlength + strlen("Content-Length: "));
+                int total_received = 0;
+                char* received = calloc(contentlength, 1);
+                if ((contentlength + byte_received) <= CHUNKSIZE) {
+                    memcpy(received, request + byte_received - contentlength, contentlength);
+                    total_received = contentlength;
+                }
+                else
+                {
+                    do {
+                        byte_received = recv(client_socket, received + total_received, CHUNKSIZE, 0);
+                        if (byte_received == SOCKET_ERROR) {
+                            printf("recv error in POST xhr: %d\n", WSAGetLastError());
+                            break;
+                        }
+                        total_received += byte_received;
+                        //printf("%d,", byte_received);
+                    } while (total_received < contentlength);
+                }
+                printf("...%d of %d\n", total_received, contentlength);
+                char response[256];
+                sprintf_s(response, 20, "HTTP/1.1 200 OK\r\n\r\n");
+                int ret = send(client_socket, response, (int)strlen(response), 0);
+                if (ret == SOCKET_ERROR) {
+                    printf("'send'1 (when handling POST/DWT): %d", WSAGetLastError());
+                    exit(-1);
+                }
+
+                int execTime = inverse_transform(received, width, height, horLevels, vertLevels);
+
+                char* sendback = calloc(contentlength * 2, 1);
+                for (int i = 0; i < contentlength; ++i) {
+                    sendback[2 * i] = received[i] & 0x7F;
+                    sendback[2 * i + 1] = (received[i] >> 7) & 0x01;
+                }
+
+                ret = send(client_socket, sendback, contentlength * 2, 0);
+                if (ret == SOCKET_ERROR) {
+                    printf("'send'2 (when handling POST): %d", WSAGetLastError());
+                    exit(-1);
+                }
+
+                double execTime_ms = 1000 * (double)(execTime) / CLOCKS_PER_SEC;
+                printf("dwt execution time: %f ms\n", execTime_ms);
+
+                free(received);
+                received = NULL;
+                free(sendback);
+                sendback = NULL;
             }
-
-            clock_t loopstarted = clock();
-            forward_transform(received, width, height, 1, 1);
-
-            char* sendback = calloc(contentlength * 2, 1);
-            for (int i = 0; i < contentlength; ++i) {
-                sendback[2 * i] = received[i] & 0x7F;
-                sendback[2 * i + 1] = ((received[i] & 0x80) ? 1 : 0);
-            }
-            clock_t loopexited = clock();
-
-            ret = send(client_socket, sendback, contentlength * 2, 0);
-            if (ret == SOCKET_ERROR) {
-                printf("'send'2 (when handling POST): %d", WSAGetLastError());
-                exit(-1);
-            }
-
-            double execTime = 1000 * (double)(loopexited - loopstarted) / CLOCKS_PER_SEC;
-            printf("dwt execution time: %f ms\n", execTime);
-
-
-            free(received);
-            received = NULL;
             return "";// parse_POST(query_method, client_socket);
         }
     }
