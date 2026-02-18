@@ -69,8 +69,6 @@ function forward_transform_vertical(level) {
     }
 }
 function inverse_transform() {
-    alert("Under construction");
-    return;
     const ctx = document.getElementById("idCanvas").getContext("2d", { willReadFrequently: true });
     const xhr = new XMLHttpRequest();
     xhr.open("POST", '/iDWT', false);

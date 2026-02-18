@@ -24,6 +24,7 @@ int32_t* imG;
 int32_t* imB;
 
 int width, height, imgsize;
+int horLevels, vertLevels;
 
 void dwt_forward(int32_t* im, int beg, int maxindexval, int indexdiff, int level) { // indexdiff = (hor vs. vert) ? 1 : bitmap_stride;
     const inc = indexdiff << level;
@@ -70,8 +71,18 @@ void forward_transform_vertical(level) {
     }
 }
 
-int forward_transform(uint8_t* imageData, int width, int height, int horLevels, int vertLevels)
+int forward_transform(uint8_t* imageData, int _width, int _height, int _horLevels, int _vertLevels)
 {
+    free(imR);
+    imR = NULL;
+    free(imG);
+    imG = NULL;
+    free(imB);
+    imB = NULL;
+    width = _width;
+    height = _height;
+    horLevels = _horLevels;
+    vertLevels = _vertLevels;
     imgsize = width * height;
     imR = (int32_t*)malloc(sizeof(int32_t) * imgsize);
     imG = (int32_t*)malloc(sizeof(int32_t) * imgsize);
@@ -96,12 +107,6 @@ int forward_transform(uint8_t* imageData, int width, int height, int horLevels, 
             imageData[i * 4 + 1] = clamp(imG[i] >> 12, 255);
             imageData[i * 4 + 2] = clamp(imB[i] >> 12, 255);
     }
-    free(imR);
-    imR = NULL;
-    free(imG);
-    imG = NULL;
-    free(imB);
-    imB = NULL;
     return (finishTime - startTime);
 }
 
@@ -111,15 +116,13 @@ void dwt_inverse(int32_t* im, int beg, int maxindexval, int indexdiff, int level
     //assert(inc < end && "stepping outside source image");
 
     // low pass filter, {-1./4, 1./4, -1./4}
-    int i = 0;
+    int i = beg;
     im[i] -= (im[inc] + 1) >> 1;
     i += 2 * inc;
-    for (; i < end - inc; i += 2 * inc)
-    {
+    for (; i < end - inc; i += 2 * inc) {
         im[i] -= (im[i - inc] + im[i + inc] + 2) >> 2;
     }
-    if (i < end)
-    {
+    if (i < end) {
         im[i] -= (im[i - inc] + 1) >> 1;
     }
 
@@ -127,13 +130,11 @@ void dwt_inverse(int32_t* im, int beg, int maxindexval, int indexdiff, int level
     // successive convolutions with {-1./4, 1., -1./4} for even pixels
     // and {1./2, 1., 1./2} for even pixels
     // for im[n] result is -im[n-2]/8 + im[n-1]/8 + 6*im[n]/8 + im[n+1]/8 - im[n+2]/8
-    i = inc;
-    for (; i < end - inc; i += 2 * inc)
-    {
+    i = beg + inc;
+    for (; i < end - inc; i += 2 * inc) {
         im[i] += (im[i - inc] + im[i + inc]) >> 1;
     }
-    if (i < end)
-    {
+    if (i < end) {
         im[i] += im[i - inc];
     }
 }
@@ -153,13 +154,13 @@ void inverse_transform_vertical(level) {
     }
 }
 
-int inverse_transform(char* imageData, int width, int height, int horLevels, int vertLevels)
+int inverse_transform(char* imageData)
 {
     clock_t startTime = clock();
-    for (int level = 0; level < horLevels; ++level) {
+    for (int level = horLevels - 1; level >= 0; --level) {
         inverse_transform_horizontal(level);
     }
-    for (int level = 0; level < vertLevels; ++level) {
+    for (int level = vertLevels - 1; level >= 0; --level) {
         inverse_transform_vertical(level);
     }
     clock_t finishTime = clock();
@@ -168,6 +169,14 @@ int inverse_transform(char* imageData, int width, int height, int horLevels, int
         imageData[i * 4 + 1] = clamp(imG[i] >> 12, 255);
         imageData[i * 4 + 2] = clamp(imB[i] >> 12, 255);
     }
+    free(imR);
+    imR = NULL;
+    free(imG);
+    imG = NULL;
+    free(imB);
+    imB = NULL;
+    imgsize = width = height = 0;
+    horLevels = vertLevels = 0;
     return (finishTime - startTime);
 }
 
