@@ -6,7 +6,9 @@
 #include <stdint.h>
 #include <time.h>
 
-static _inline uint8_t clamp(int32_t v, int32_t max_v)
+#include "cc-wavelet.h"
+
+static inline uint8_t clamp(int32_t v, int32_t max_v)
 {
     if (v > max_v)
     {
@@ -23,12 +25,9 @@ int32_t* imR;
 int32_t* imG;
 int32_t* imB;
 
-int width, height, imgsize;
-int horLevels, vertLevels;
-
 void dwt_forward(int32_t* im, int beg, int maxindexval, int indexdiff, int level) { // indexdiff = (hor vs. vert) ? 1 : bitmap_stride;
-    const inc = indexdiff << level;
-    const end = beg + maxindexval;
+    const int inc = indexdiff << level;
+    const int end = beg + maxindexval;
     //assert(inc < end && "stepping outside source image");
 
     int i = beg + inc;
@@ -56,14 +55,15 @@ void dwt_forward(int32_t* im, int beg, int maxindexval, int indexdiff, int level
     }
 }
 
-void forward_transform_horizontal(level) {
+void forward_transform_horizontal(int level) {
     for (int ih = 0; ih < height; ++ih) {
         dwt_forward(imR, ih * width, width, 1, level);
         dwt_forward(imG, ih * width, width, 1, level);
         dwt_forward(imB, ih * width, width, 1, level);
     }
 }
-void forward_transform_vertical(level) {
+void forward_transform_vertical(int level) {
+    int imgsize = width * height;
     for (int iw = 0; iw < width; ++iw) {
         dwt_forward(imR, iw, imgsize, width, level);
         dwt_forward(imG, iw, imgsize, width, level);
@@ -83,7 +83,7 @@ int forward_transform(uint8_t* imageData, int _width, int _height, int _horLevel
     height = _height;
     horLevels = _horLevels;
     vertLevels = _vertLevels;
-    imgsize = width * height;
+    int imgsize = width * height;
     imR = (int32_t*)malloc(sizeof(int32_t) * imgsize);
     imG = (int32_t*)malloc(sizeof(int32_t) * imgsize);
     imB = (int32_t*)malloc(sizeof(int32_t) * imgsize);
@@ -111,8 +111,8 @@ int forward_transform(uint8_t* imageData, int _width, int _height, int _horLevel
 }
 
 void dwt_inverse(int32_t* im, int beg, int maxindexval, int indexdiff, int level) { // indexdiff = (hor vs. vert) ? 1 : bitmap_stride;
-    const inc = indexdiff << level;
-    const end = beg + maxindexval;
+    const int inc = indexdiff << level;
+    const int end = beg + maxindexval;
     //assert(inc < end && "stepping outside source image");
 
     // low pass filter, {-1./4, 1./4, -1./4}
@@ -139,14 +139,15 @@ void dwt_inverse(int32_t* im, int beg, int maxindexval, int indexdiff, int level
     }
 }
 
-void inverse_transform_horizontal(level) {
+void inverse_transform_horizontal(int level) {
     for (int ih = 0; ih < height; ++ih) {
         dwt_inverse(imR, ih * width, width, 1, level);
         dwt_inverse(imG, ih * width, width, 1, level);
         dwt_inverse(imB, ih * width, width, 1, level);
     }
 }
-void inverse_transform_vertical(level) {
+void inverse_transform_vertical(int level) {
+    int imgsize = width * height;
     for (int iw = 0; iw < width; ++iw) {
         dwt_inverse(imR, iw, imgsize, width, level);
         dwt_inverse(imG, iw, imgsize, width, level);
@@ -154,7 +155,7 @@ void inverse_transform_vertical(level) {
     }
 }
 
-int inverse_transform(char* imageData)
+int inverse_transform(uint8_t* imageData, int _width, int _height, int _horLevels, int _vertLevels)
 {
     clock_t startTime = clock();
     for (int level = horLevels - 1; level >= 0; --level) {
@@ -164,6 +165,7 @@ int inverse_transform(char* imageData)
         inverse_transform_vertical(level);
     }
     clock_t finishTime = clock();
+    int imgsize = width * height;
     for (int i = 0; i < imgsize; ++i) {
         imageData[i * 4 + 0] = clamp(imR[i] >> 12, 255);
         imageData[i * 4 + 1] = clamp(imG[i] >> 12, 255);

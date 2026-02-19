@@ -3,5 +3,10 @@
 
 #pragma once
 
-int forward_transform(char* imageData, int width, int height, int horLevels, int vertLevels);
-int inverse_transform(char* imageData, int width, int height, int horLevels, int vertLevels);
+int forward_transform(uint8_t* imageData, int _width, int _height, int _horLevels, int _vertLevels);
+int inverse_transform(uint8_t* imageData, int _width, int _height, int _horLevels, int _vertLevels);
+
+extern int width;
+extern int height;
+extern int horLevels;
+extern int vertLevels;

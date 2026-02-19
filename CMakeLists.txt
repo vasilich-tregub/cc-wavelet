@@ -13,7 +13,11 @@ project ("cc-wavelet")
 
 # Add source to this project's executable.
 #add_executable (cc-wavelet "cc-wavelet.c" "cc-wavelet.h" "image-readwrite.h" "dwt.c" "dwt.h" "httpserverreceivepostrequest.1.0.cpp" "httpserverreceivepostrequest.1.0 (2).cpp")
+if (WIN32)
 add_executable (webui-cc-wavelet "webui-cc-wavelet.c" "cc-wavelet.c")
+elseif (LINUX)
+add_executable (webui-cc-wavelet "webui-cc-wavelet-ux.c" "cc-wavelet.c")
+endif()
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET webui-cc-wavelet PROPERTY C_STANDARD 11)
