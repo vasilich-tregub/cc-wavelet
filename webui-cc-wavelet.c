@@ -13,13 +13,13 @@
 
 #pragma comment(lib, "Ws2_32.lib")
 
-int byte_received = 0;
+int bytes_received = 0;
 
 #define PORT 8080
 
 #define CHUNKSIZE 0x800
 
-void build_http_response_with_file(int client_socket, char* file_name) {
+void build_http_response_with_file(SOCKET client_socket, char* file_name) {
 
     char response[1024];
 
@@ -73,13 +73,13 @@ int height = 0;
 int horLevels = 0;
 int vertLevels = 0;
 char* received = NULL;
-void handle_client(int client_socket) {
+void handle_client(SOCKET client_socket) {
     char request[CHUNKSIZE] = { 0 };
-    byte_received = 0;
-    byte_received = recv(client_socket, request, CHUNKSIZE, 0);
-    if (byte_received > 0)
+    bytes_received = 0;
+    bytes_received = recv(client_socket, request, CHUNKSIZE, 0);
+    if (bytes_received > 0)
     {
-        printf("Bytes received: %d\n", byte_received);
+        printf("Bytes received: %d\n", bytes_received);
         char* query_method = strtok(request, " ");
         if (!strcmp(query_method, "GET")) {
             char* file_name;
@@ -89,7 +89,7 @@ void handle_client(int client_socket) {
                 char response[256];
                 sprintf_s(response, 20, "HTTP/1.1 200 OK\r\n\r\n");
                 send(client_socket, response, (int)strlen(response), 0);
-                int sent = send(client_socket, query_string, strlen(query_string), 0);
+                int sent = send(client_socket, query_string, (int)strlen(query_string), 0);
                 width = atoi(query_string + 8);
                 char* ptr_height = strstr(query_string, "height=") + 7;
                 height = atoi(ptr_height);
@@ -97,6 +97,7 @@ void handle_client(int client_socket) {
                 horLevels = atoi(ptr_horLevels);
                 char* ptr_vertLevels = strstr(query_string, "vertLevels=") + 11;
                 vertLevels = atoi(ptr_vertLevels);
+                return;
             }
             file_name = strtok(query_string, " ");
             build_http_response_with_file(client_socket, file_name + 1);
@@ -110,30 +111,44 @@ void handle_client(int client_socket) {
                     exit(-1);
                 }
                 int contentlength = atoi(ptr_contentlength + strlen("Content-Length: "));
-                    int total_received = 0;
-                    char* received = calloc(contentlength, 1);
-                    if ((contentlength + byte_received) <= CHUNKSIZE) {
-                        memcpy(received, request + byte_received - contentlength, contentlength);
-                        total_received = contentlength;
+                int total_received = 0;
+                char* received = calloc(contentlength, 1);
+                if ((contentlength + bytes_received) <= CHUNKSIZE) {
+                    memcpy(received, request + bytes_received - contentlength, contentlength);
+                    total_received = contentlength;
+                }
+                else
+                {
+                    int ixb = 0; // body origin index
+                    for (; ixb <= bytes_received - 4; ++ixb) {
+                        if (*(request + ixb + 0) == 0x0d && *(request + ixb + 1) == 0x0a &&
+                            *(request + ixb + 2) == 0x0d && *(request + ixb + 3) == 0x0a)
+                            break;
+                    }
+                    if (ixb > bytes_received - 4) {
+                        printf("DWT xhr seems to never end with (CR-LF-CR-LF), exit\n");
+                        exit(-1);
                     }
                     else
                     {
+                        memcpy(received, request + ixb + 4, bytes_received - ixb - 4);
+                        total_received = bytes_received - ixb - 4;
                         do {
-                            byte_received = recv(client_socket, received + total_received, CHUNKSIZE, 0);
-                            if (byte_received == SOCKET_ERROR) {
-                                printf("recv error in POST xhr: %d\n", WSAGetLastError());
+                            bytes_received = recv(client_socket, received + total_received, CHUNKSIZE, 0);
+                            if (bytes_received == SOCKET_ERROR) {
+                                printf("recv error in DWT xhr: %d\n", errno);
                                 break;
                             }
-                            total_received += byte_received;
-                            //printf("%d,", byte_received);
+                            total_received += bytes_received;
                         } while (total_received < contentlength);
                     }
+                }
                 printf("...%d of %d\n", total_received, contentlength);
                 char response[256];
                 sprintf_s(response, 20, "HTTP/1.1 200 OK\r\n\r\n");
                 int ret = send(client_socket, response, (int)strlen(response), 0);
                 if (ret == SOCKET_ERROR) {
-                    printf("'send'1 (when handling POST/DWT): %d", WSAGetLastError());
+                    printf("'send'1 (when handling DWT xhr): %d", WSAGetLastError());
                     exit(-1);
                 }
 
@@ -147,12 +162,12 @@ void handle_client(int client_socket) {
 
                 ret = send(client_socket, sendback, contentlength * 2, 0);
                 if (ret == SOCKET_ERROR) {
-                    printf("'send'2 (when handling POST): %d", WSAGetLastError());
+                    printf("'send'2 (when handling DWT xhr): %d", WSAGetLastError());
                     exit(-1);
                 }
 
                 double execTime_ms = 1000 * (double)(execTime) / CLOCKS_PER_SEC;
-                printf("dwt execution time: %f ms\n", execTime_ms);
+                printf("DWT execution time: %f ms\n", execTime_ms);
 
                 free(received);
                 received = NULL;
@@ -168,28 +183,42 @@ void handle_client(int client_socket) {
                 int contentlength = atoi(ptr_contentlength + strlen("Content-Length: "));
                 int total_received = 0;
                 char* received = calloc(contentlength, 1);
-                if ((contentlength + byte_received) <= CHUNKSIZE) {
-                    memcpy(received, request + byte_received - contentlength, contentlength);
+                if ((contentlength + bytes_received) <= CHUNKSIZE) {
+                    memcpy(received, request + bytes_received - contentlength, contentlength);
                     total_received = contentlength;
                 }
                 else
                 {
-                    do {
-                        byte_received = recv(client_socket, received + total_received, CHUNKSIZE, 0);
-                        if (byte_received == SOCKET_ERROR) {
-                            printf("recv error in POST xhr: %d\n", WSAGetLastError());
+                    int ixb = 0; // body origin index
+                    for (; ixb <= bytes_received - 4; ++ixb) {
+                        if (*(request + ixb + 0) == 0x0d && *(request + ixb + 1) == 0x0a &&
+                            *(request + ixb + 2) == 0x0d && *(request + ixb + 3) == 0x0a)
                             break;
-                        }
-                        total_received += byte_received;
-                        //printf("%d,", byte_received);
-                    } while (total_received < contentlength);
+                    }
+                    if (ixb > bytes_received - 4) {
+                        printf("iDWT xhr seems to never end with (CR-LF-CR-LF), exit\n");
+                        exit(-1);
+                    }
+                    else
+                    {
+                        memcpy(received, request + ixb + 4, bytes_received - ixb - 4);
+                        total_received = bytes_received - ixb - 4;
+                        do {
+                            bytes_received = recv(client_socket, received + total_received, CHUNKSIZE, 0);
+                            if (bytes_received == SOCKET_ERROR) {
+                                printf("recv error in iDWT xhr: %d\n", errno);
+                                break;
+                            }
+                            total_received += bytes_received;
+                        } while (total_received < contentlength);
+                    }
                 }
                 printf("...%d of %d\n", total_received, contentlength);
                 char response[256];
                 sprintf_s(response, 20, "HTTP/1.1 200 OK\r\n\r\n");
                 int ret = send(client_socket, response, (int)strlen(response), 0);
                 if (ret == SOCKET_ERROR) {
-                    printf("'send'1 (when handling POST/DWT): %d", WSAGetLastError());
+                    printf("'send'1 (when handling iDWT xhr): %d", WSAGetLastError());
                     exit(-1);
                 }
 
@@ -203,12 +232,12 @@ void handle_client(int client_socket) {
 
                 ret = send(client_socket, sendback, contentlength * 2, 0);
                 if (ret == SOCKET_ERROR) {
-                    printf("'send'2 (when handling POST): %d", WSAGetLastError());
+                    printf("'send'2 (when handling iDWT xhr): %d", WSAGetLastError());
                     exit(-1);
                 }
 
                 double execTime_ms = 1000 * (double)(execTime) / CLOCKS_PER_SEC;
-                printf("dwt execution time: %f ms\n", execTime_ms);
+                printf("iDWT execution time: %f ms\n", execTime_ms);
 
                 free(received);
                 received = NULL;
@@ -217,7 +246,7 @@ void handle_client(int client_socket) {
             }
         }
     }
-    else if (byte_received == 0) {
+    else if (bytes_received == 0) {
         printf("Connection closed\n");
     }
     else
@@ -226,7 +255,7 @@ void handle_client(int client_socket) {
 
 int main() {
 
-    int server_fd, new_socket;
+    SOCKET server_fd, new_socket;
     struct sockaddr_in address;
     int addrlen = sizeof(address);
 
