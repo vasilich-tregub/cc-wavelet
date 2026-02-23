@@ -112,7 +112,7 @@ void handle_client(SOCKET client_socket) {
                 }
                 int contentlength = atoi(ptr_contentlength + strlen("Content-Length: "));
                 int total_received = 0;
-                char* received = calloc(contentlength, 1);
+                char* received = (char*)calloc(contentlength, 1);
                 if ((contentlength + bytes_received) <= CHUNKSIZE) {
                     memcpy(received, request + bytes_received - contentlength, contentlength);
                     total_received = contentlength;
@@ -154,13 +154,7 @@ void handle_client(SOCKET client_socket) {
 
                 int execTime = forward_transform(received, width, height, horLevels, vertLevels);
 
-                char* sendback = calloc(contentlength * 2, 1);
-                for (int i = 0; i < contentlength; ++i) {
-                    sendback[2 * i] = received[i] & 0x7F;
-                    sendback[2 * i + 1] = (received[i] >> 7) & 0x01;
-                }
-
-                ret = send(client_socket, sendback, contentlength * 2, 0);
+                ret = send(client_socket, received, contentlength, 0);
                 if (ret == SOCKET_ERROR) {
                     printf("'send'2 (when handling DWT xhr): %d", WSAGetLastError());
                     exit(-1);
@@ -171,8 +165,6 @@ void handle_client(SOCKET client_socket) {
 
                 free(received);
                 received = NULL;
-                free(sendback);
-                sendback = NULL;
             }
             else if (!strcmp(query_route, "/iDWT")) {
                 char* ptr_contentlength = strstr(request + 11, "Content-Length: ");
@@ -182,7 +174,7 @@ void handle_client(SOCKET client_socket) {
                 }
                 int contentlength = atoi(ptr_contentlength + strlen("Content-Length: "));
                 int total_received = 0;
-                char* received = calloc(contentlength, 1);
+                char* received = (char*)calloc(contentlength, 1);
                 if ((contentlength + bytes_received) <= CHUNKSIZE) {
                     memcpy(received, request + bytes_received - contentlength, contentlength);
                     total_received = contentlength;
@@ -224,13 +216,7 @@ void handle_client(SOCKET client_socket) {
 
                 int execTime = inverse_transform(received, width, height, horLevels, vertLevels);
 
-                char* sendback = calloc(contentlength * 2, 1);
-                for (int i = 0; i < contentlength; ++i) {
-                    sendback[2 * i] = received[i] & 0x7F;
-                    sendback[2 * i + 1] = (received[i] >> 7) & 0x01;
-                }
-
-                ret = send(client_socket, sendback, contentlength * 2, 0);
+                ret = send(client_socket, received, contentlength, 0);
                 if (ret == SOCKET_ERROR) {
                     printf("'send'2 (when handling iDWT xhr): %d", WSAGetLastError());
                     exit(-1);
@@ -241,8 +227,6 @@ void handle_client(SOCKET client_socket) {
 
                 free(received);
                 received = NULL;
-                free(sendback);
-                sendback = NULL;
             }
         }
     }

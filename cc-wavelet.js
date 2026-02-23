@@ -40,18 +40,20 @@ function forward_transform(img) {
 
     imageData = ctx.getImageData(0, 0, width, height);
 
-    xhr.open("POST", '/DWT', false);
+    xhr.open("POST", '/DWT', true);
+    xhr.responseType = 'arraybuffer';
+    xhr.onload = (event) => {
+        let resp = new DataView(xhr.response);
+        for (let i = 0; i < imageData.data.length; ++i) {
+            imageData.data[i] = resp.getUint8(i);
+        }
+        ctx.putImageData(imageData, 0, 0);
+    };
+
     let starttime = performance.now();
     xhr.send(imageData.data);
     let finishtime = performance.now();
-
-    let responseString = xhr.responseText;
-    for (let i = 0; i < imageData.data.length; ++i) {
-        imageData.data[i] = (responseString.charCodeAt(2 * i) & 0x7f) + responseString.charCodeAt(2 * i + 1) * 128;
-    }
     idPerf.value = ((finishtime - starttime).toString());
-    ctx.putImageData(imageData, 0, 0);
-
 }
 
 function forward_transform_horizontal(level) {
@@ -71,15 +73,18 @@ function forward_transform_vertical(level) {
 function inverse_transform() {
     const ctx = document.getElementById("idCanvas").getContext("2d", { willReadFrequently: true });
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", '/iDWT', false);
+    xhr.open("POST", '/iDWT', true);
+    xhr.responseType = 'arraybuffer';
+    xhr.onload = (event) => {
+        let resp = new DataView(xhr.response);
+        for (let i = 0; i < imageData.data.length; ++i) {
+            imageData.data[i] = resp.getUint8(i);
+        }
+        ctx.putImageData(imageData, 0, 0);
+    };
+
     let starttime = performance.now();
     xhr.send(imageData.data);
     let finishtime = performance.now();
-
-    let responseString = xhr.responseText;
-    for (let i = 0; i < imageData.data.length; ++i) {
-        imageData.data[i] = (responseString.charCodeAt(2 * i) & 0x7f) + responseString.charCodeAt(2 * i + 1) * 128;
-    }
     idPerf.value = ((finishtime - starttime).toString());
-    ctx.putImageData(imageData, 0, 0);
 }

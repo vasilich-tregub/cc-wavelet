@@ -155,13 +155,7 @@ void handle_client(int client_socket) {
 
                 int execTime = forward_transform(received, width, height, horLevels, vertLevels);
 
-                char* sendback = calloc(contentlength * 2, 1);
-                for (int i = 0; i < contentlength; ++i) {
-                    sendback[2 * i] = received[i] & 0x7F;
-                    sendback[2 * i + 1] = (received[i] >> 7) & 0x01;
-                }
-
-                ret = send(client_socket, sendback, contentlength * 2, 0);
+                ret = send(client_socket, received, contentlength, 0);
                 if (ret == SOCKET_ERROR) {
                     printf("'send'2 (when handling POST): %d", errno);
                     exit(-1);
@@ -172,8 +166,6 @@ void handle_client(int client_socket) {
 
                 free(received);
                 received = NULL;
-                free(sendback);
-                sendback = NULL;
             }
             else if (!strcmp(query_route, "/iDWT")) {
                 char* ptr_contentlength = strstr(request + 11, "Content-Length: ");
@@ -225,13 +217,7 @@ void handle_client(int client_socket) {
 
                 int execTime = inverse_transform(received, width, height, horLevels, vertLevels);
 
-                char* sendback = calloc(contentlength * 2, 1);
-                for (int i = 0; i < contentlength; ++i) {
-                    sendback[2 * i] = received[i] & 0x7F;
-                    sendback[2 * i + 1] = (received[i] >> 7) & 0x01;
-                }
-
-                ret = send(client_socket, sendback, contentlength * 2, 0);
+                ret = send(client_socket, received, contentlength, 0);
                 if (ret == SOCKET_ERROR) {
                     printf("'send'2 (when handling POST): %d", errno);
                     exit(-1);
@@ -242,8 +228,6 @@ void handle_client(int client_socket) {
 
                 free(received);
                 received = NULL;
-                free(sendback);
-                sendback = NULL;
             }
         }
     }
