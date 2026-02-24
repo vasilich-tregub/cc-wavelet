@@ -121,7 +121,7 @@ function dwt_forward(im, beg, maxindexval, indexdiff, level) { // indexdiff = (h
     // and {1./4, 1., 1./4} for even pixels
     // for im[n] result is -im[n-2]/8 + im[n-1]/4 + 6*im[n]/8 + im[n+1]/4 - im[n+2]/8
     // i.e., {-1./8, 2./8, 6./8, 2./8, -1./8}
-    im[i] += (im[inc] + 1) >> 1;
+    im[i] += (im[i + inc] + 1) >> 1;
     i += 2 * inc;
     for (; i < end - inc; i += 2 * inc) {
         im[i] += (im[i - inc] + im[i + inc] + 2) >> 2;
@@ -137,7 +137,7 @@ function dwt_inverse(im, beg, maxindexval, indexdiff, level) { // indexdiff = (h
 
     // low pass filter, {-1./4, 1./4, -1./4}
     let i = beg;
-    im[i] -= (im[inc] + 1) >> 1;
+    im[i] -= (im[i + inc] + 1) >> 1;
     i += 2 * inc;
     for (; i < end - inc; i += 2 * inc) {
         im[i] -= (im[i - inc] + im[i + inc] + 2) >> 2;
