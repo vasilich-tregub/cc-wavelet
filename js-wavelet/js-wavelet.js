@@ -60,11 +60,9 @@ function forward_transform_horizontal(level) {
     }
 }
 function forward_transform_vertical(level) {
-    for (let iw = 0; iw < width; ++iw) {
-        dwt_forward(imR, iw, imgsize, width, level);
-        dwt_forward(imG, iw, imgsize, width, level);
-        dwt_forward(imB, iw, imgsize, width, level);
-    }
+    forward_transform_vertical_comp(imR, level);
+    forward_transform_vertical_comp(imG, level);
+    forward_transform_vertical_comp(imB, level);
 }
 function inverse_transform() {
     const ctx = document.getElementById("idCanvas").getContext("2d", { willReadFrequently: true });
@@ -108,26 +106,24 @@ function dwt_forward(im, beg, maxindexval, indexdiff, level) { // indexdiff = (h
 
     let i = beg + inc;
     // high pass filter, {-1./2, 1., -1./2}
+    if (i >= end - inc) {
+        im[i] -= im[i - inc];
+        im[i - inc] += (im[i] + 1) >> 1;
+        return;
+    }
+    im[i] -= (im[i - inc] + im[i + inc]) >> 1;
+    im[i - inc] += (im[i] + 1) >> 1;
+    i += 2 * inc;
     for (; i < end - inc; i += 2 * inc) {
         im[i] -= (im[i - inc] + im[i + inc]) >> 1;
+        im[i - inc] += (im[i - 2 * inc] + im[i] + 2) >> 2;
     }
     if (i < end) {
         im[i] -= im[i - inc];
+        im[i - inc] += (im[i - 2 * inc] + im[i] + 2) >> 2;
     }
-
-    i = beg;
-    // low pass filter, 
-    // successive convolutions with {-1./2, 1., -1./2} for odd pixels
-    // and {1./4, 1., 1./4} for even pixels
-    // for im[n] result is -im[n-2]/8 + im[n-1]/4 + 6*im[n]/8 + im[n+1]/4 - im[n+2]/8
-    // i.e., {-1./8, 2./8, 6./8, 2./8, -1./8}
-    im[i] += (im[i + inc] + 1) >> 1;
-    i += 2 * inc;
-    for (; i < end - inc; i += 2 * inc) {
-        im[i] += (im[i - inc] + im[i + inc] + 2) >> 2;
-    }
-    if (i < end) {
-        im[i] += (im[i - inc] + 1) >> 1;
+    else if (i - inc < end) {
+        im[i - inc] += (im[i - 2 * inc] + 1) >> 1;
     }
 }
 function dwt_inverse(im, beg, maxindexval, indexdiff, level) { // indexdiff = (hor vs. vert) ? 1 : bitmap_stride;
@@ -156,5 +152,38 @@ function dwt_inverse(im, beg, maxindexval, indexdiff, level) { // indexdiff = (h
     }
     if (i < end) {
         im[i] += im[i - inc];
+    }
+}
+function forward_transform_vertical_comp(im, level) { // indexdiff = (hor vs. vert) ? 1 : bitmap_stride;
+    const inc = width << level;
+    let ih = inc;
+    for (let iw = 0; iw < width; ++iw) {
+        if (ih <= inc) {
+            if (2 * inc >= height * width) {
+                im[iw + inc] -= im[iw];
+                im[iw] += (im[iw + inc] + 1) >> 1;
+                return;
+            }
+            im[iw + inc] -= (im[iw] + im[iw + 2 * inc]) >> 1;
+            im[iw] += (im[iw + inc] + 1) >> 1;
+        }
+    }
+    ih += 2 * inc;
+    for (; ih < width * height - inc; ih += 2 * inc) {
+        for (let iw = 0; iw < width; ++iw) {
+            //const end = iw + width * height;
+            //assert(inc < end && "stepping outside source image");
+            im[iw + ih] -= (im[iw + ih - inc] + im[iw + ih + inc]) >> 1;
+            im[iw + ih - inc] += (im[iw + ih - 2 * inc] + im[iw + ih] + 2) >> 2;
+        }
+    }
+    for (let iw = 0; iw < width; ++iw) {
+        if (ih < width * height) {
+            im[iw + ih] -= im[iw + ih - inc];
+            im[iw + ih - inc] += (im[iw + ih - 2 * inc] + im[iw + ih] + 2) >> 2;
+        }
+        else if (ih - inc < width * height) {
+            im[iw + ih - inc] += (im[iw + ih - 2 * inc] + 1) >> 1;
+        }
     }
 }
