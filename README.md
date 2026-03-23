@@ -10,7 +10,7 @@ the results with the response of this xmlhttprequest and displays the response i
 The page layout is identical to that of the [WebAssembly wavelet transform](https://vasilich-tregub.github.io/wa-wavelet/index.html).
 
 I started to author this C implementation of the wavelet (Le Gall 5/3) transform with the only purpose 
-to compare the performance of C and [Web Assempler](https://vasilich-tregub.github.io/wa-wavelet/index.html)
+to compare the performance of C and [Web Assembly](https://vasilich-tregub.github.io/wa-wavelet/index.html)
 implementations using the identical algorithm, and soon realized how GUI can be useful to input image data and 
 display the results in visuals. 
 
