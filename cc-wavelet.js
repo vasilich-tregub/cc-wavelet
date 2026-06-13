@@ -22,16 +22,16 @@ function forward_transform(img) {
     const ctx = document.getElementById("idCanvas").getContext("2d", { willReadFrequently: true });
     ctx.drawImage(img, 0, 0);
 
-    const xhr = new XMLHttpRequest();
-    xhr.open("GET", '/?width=' + width.toString() + '&height=' + height.toString() +
+    const xhrg = new XMLHttpRequest();
+    xhrg.open("GET", '/?width=' + width.toString() + '&height=' + height.toString() +
         '&horLevels=' + horLevels.toString() + '&vertLevels=' + vertLevels.toString(), false);
     try {
-        xhr.send();
-        if (xhr.status != 200) {
-            alert(xhr.statusText);
+        xhrg.send();
+        if (xhrg.status != 200) {
+            alert(xhrg.statusText);
         }
         else {
-            idPerf.value = xhr.response;
+            idPerf.value = xhrg.response;
         }
     }
     catch (err) {
@@ -39,7 +39,8 @@ function forward_transform(img) {
     }
 
     imageData = ctx.getImageData(0, 0, width, height);
-
+    // on xhr reuse, see https://stackoverflow.com/questions/28099211/does-xmlhttprequest-object-close-after-response-received
+    const xhr = new XMLHttpRequest();
     xhr.open("POST", '/DWT', true);
     xhr.responseType = 'arraybuffer';
     xhr.onload = (event) => {
