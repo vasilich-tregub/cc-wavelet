@@ -262,16 +262,26 @@ int main() {
         close(server_fd);
         exit(EXIT_FAILURE);
     }
+    printf("Server is listening on port %d\n", PORT);
     while (1) {
         if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
             perror("accept");
             close(server_fd);
             exit(EXIT_FAILURE);
         }
+        // set SO_RCVTIMEO
+        struct timeval rcvtimeout;
+        rcvtimeout.tv_sec = 1;
+        rcvtimeout.tv_usec = 0;
+        if (setsockopt(new_socket, SOL_SOCKET, SO_RCVTIMEO, &rcvtimeout, sizeof(rcvtimeout)) == SOCKET_ERROR)
+        {
+            perror("set RCVTIMEO for client socket failed");
+            close(new_socket);
+            break;
+        }
         // Handle the client's request in a separate function
         handle_client(new_socket);
         close(new_socket);
     }
-    printf("Server is listening on port %d\n", PORT);
     return 0;
 }

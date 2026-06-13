@@ -253,14 +253,6 @@ int main() {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
-    // set SO_RCVTIMEO
-    int rcvtimeout = 1000;
-    if (setsockopt(server_fd, SOL_SOCKET, SO_RCVTIMEO, (char*)&rcvtimeout, sizeof(int)) == SOCKET_ERROR)
-    {   
-        perror("set RCVTIMEO failed");
-        closesocket(server_fd);
-        exit(EXIT_FAILURE);
-    }
     // Binding the socket to the port 8080
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -283,6 +275,14 @@ int main() {
             perror("accept");
             closesocket(server_fd);
             exit(EXIT_FAILURE);
+        }
+        // set SO_RCVTIMEO
+        int rcvtimeout = 1000;
+        if (setsockopt(new_socket, SOL_SOCKET, SO_RCVTIMEO, (char*)&rcvtimeout, sizeof(int)) == SOCKET_ERROR)
+        {
+            perror("set RCVTIMEO for new client socket failed");
+            closesocket(new_socket);
+            break;
         }
         // Handle the client's request in a separate function
         handle_client(new_socket);
